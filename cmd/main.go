@@ -2,44 +2,28 @@ package main
 
 import (
 	"fmt"
-	"queue_system/broker"
-	"sync"
-	"time"
+	"queue_system/server"
 )
 
 func main() {
 
-	var wg sync.WaitGroup
-
-	b := broker.NewBroker()
-
-	producer := broker.NewProducer(b)
-
-	consumer := broker.NewConsumer()
-
-	consumer.Subscribe(b)
-
-	wg.Add(2)
+	server := server.CreateTCPServer("localhost:3000")
 
 	go func() {
-		defer wg.Done()
-		for i := 0; i < 10; i++ {
-			producer.Publish(fmt.Sprintf("message %d", i+1))
-		}
-	}()
+		for msg := range server.ReceiveBuffer {
 
-	go func() {
-		defer wg.Done()
-		time.Sleep(2 * time.Second)
-		for {
-			consumer.Consume()
-			if consumer.Broker.Queue.IsEmpty() {
-				break
+			fmt.Printf("< Message \n < Headers: address: %s > \n < Payload: %s > \n >", msg.Header.FromAddress, msg.Payload)
+			response := "< Message from " + msg.Header.FromAddress + " Received>"
+
+			select {
+			case server.SendBuffer <- response:
+			case <-server.QuitChannel:
+				return
 			}
-		}
 
+		}
 	}()
 
-	wg.Wait()
+	server.Listen()
 
 }

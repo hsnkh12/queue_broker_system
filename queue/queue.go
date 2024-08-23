@@ -1,8 +1,11 @@
 package queue
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
-type QueueI interface {
+type IQueue interface {
 	Enqueue(data interface{})
 	Dequeue() interface{}
 	Peek() interface{}
@@ -21,6 +24,7 @@ type QNode struct {
 
 type Queue struct {
 	head *QNode
+	Mu   sync.Mutex
 }
 
 func New() *Queue {
