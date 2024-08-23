@@ -2,12 +2,14 @@ package main
 
 import (
 	"fmt"
+	qsm "queue_system/queue_system_manager"
 	"queue_system/server"
 )
 
 func main() {
 
-	server := server.CreateTCPServer("localhost:3000")
+	q := qsm.Init()
+	server := server.CreateServer("localhost:3000", q)
 
 	go func() {
 		for msg := range server.ReceiveBuffer {

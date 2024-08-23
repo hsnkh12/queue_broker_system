@@ -6,28 +6,31 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	qsm "queue_system/queue_system_manager"
 	"sync"
 	"syscall"
 )
 
 type Server struct {
-	Address           string
-	Listener          net.Listener
-	QuitChannel       chan struct{}
-	ReceiveBuffer     chan Message
-	SendBuffer        chan string
-	Wg                sync.WaitGroup
-	ActiveConnections map[net.Conn]struct{}
-	ActiveConnsMux    sync.Mutex
+	Address            string
+	Listener           net.Listener
+	QuitChannel        chan struct{}
+	ReceiveBuffer      chan Message
+	SendBuffer         chan string
+	Wg                 sync.WaitGroup
+	ActiveConnections  map[net.Conn]struct{}
+	ActiveConnsMux     sync.Mutex
+	QueueSystemManager *qsm.QueueSystemManager
 }
 
-func CreateTCPServer(addr string) *Server {
+func CreateServer(addr string, q *qsm.QueueSystemManager) *Server {
 	return &Server{
-		Address:           addr,
-		QuitChannel:       make(chan struct{}),
-		ReceiveBuffer:     make(chan Message, 10),
-		SendBuffer:        make(chan string, 10),
-		ActiveConnections: make(map[net.Conn]struct{}),
+		Address:            addr,
+		QuitChannel:        make(chan struct{}),
+		ReceiveBuffer:      make(chan Message, 10),
+		SendBuffer:         make(chan string, 10),
+		ActiveConnections:  make(map[net.Conn]struct{}),
+		QueueSystemManager: q,
 	}
 }
 
@@ -47,6 +50,7 @@ func (s *Server) Listen() error {
 
 		close(s.QuitChannel)
 
+		s.QueueSystemManager.Purge()
 		s.CloseAllConnections()
 	}()
 
